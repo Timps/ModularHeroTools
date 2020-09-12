@@ -174,17 +174,38 @@ public class ModularModelExporter : MonoBehaviour
         AssetDatabase.CreateAsset(_mat, materialPath);
 
         Optimize(prefab.transform, _mat);
+
+        Component[] components = GetComponents(typeof(Component));
+        foreach(Component component in components)
+        {
+            Debug.Log(component);
+            if (component == cRan || component == this || component == transform) continue; 
+            CopyComponent(component, prefab);
+        }
         PrefabUtility.SaveAsPrefabAsset(prefab, prefabFile);
 
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.delayCall += () =>
-        {
-            DestroyImmediate(prefab);
-        };
-#else
         // remove the new prefab in the scene      
         DestroyImmediate(prefab);
-#endif
+    }
+
+    T CopyComponent<T>(T original, GameObject destination) where T : Component
+    {
+        System.Type type = original.GetType();
+        var dst = destination.GetComponent(type) as T;
+        if (!dst) dst = destination.AddComponent(type) as T;
+        var fields = type.GetFields();
+        foreach (var field in fields)
+        {
+            if (field.IsStatic) continue;
+            field.SetValue(dst, field.GetValue(original));
+        }
+        var props = type.GetProperties();
+        foreach (var prop in props)
+        {
+            if (!prop.CanWrite || !prop.CanWrite || prop.Name == "name" || prop.Name == "bodyPosition" || prop.Name == "bodyRotation" || prop.Name == "playbackTime") continue;
+            prop.SetValue(dst, prop.GetValue(original, null), null);
+        }
+        return dst as T;
     }
 
     private void EnsureDir(string path)
