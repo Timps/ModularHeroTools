@@ -1,5 +1,8 @@
 # ModularHeroTools
 A collection of tools designed to work with Synty Studios Modular Fantasy Heroes Pack
+This pack requires the Synty Studios Unity asset - Modular Fantasy Heroes
+Avail from the [Asset store](https://assetstore.unity.com/packages/3d/characters/humanoids/fantasy/polygon-modular-fantasy-hero-characters-143468)
+Or the [Synty Store](https://syntystore.com/products/polygon-modular-fantasy-hero-characters). 
 
 ## Instructions
 
@@ -20,3 +23,4 @@ Go forth and randomize and create!
 
 ![Image of the scripts on the default Prefab](https://i.imgur.com/ucCPwkV.png)
 
+![Image of the created folders for materials and Prefabs](https://i.imgur.com/tXcoRSZ.png)
