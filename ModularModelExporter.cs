@@ -77,7 +77,6 @@ public class ModularModelExporter : MonoBehaviour
                 if (ShortToFileName(file, "_") == filename) increment++;
             }
         }
-        Debug.Log(increment);
     }
 
     public string ShortToFileName(string input, string start)
@@ -88,15 +87,41 @@ public class ModularModelExporter : MonoBehaviour
        
     }
 
+
+#if (UNITY_EDITOR)
+    public void InitRandomizer()
+    {
+        cRan = GetComponent<CharacterRandomizer>();
+        typeof(CharacterRandomizer).GetMethod("Start", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(cRan, null);
+    }
+
+    public void InitExport()
+    {
+        bodyparts = Enum.GetValues(typeof(BodyPartEnum));
+
+        skeletonRoot = transform.Find("Root");
+
+        activeParts = new Dictionary<BodyPartEnum, GameObject>(bodyparts.Length);
+        foreach (BodyPartEnum partType in bodyparts)
+            activeParts[partType] = null;
+    }
+#endif
+
     [Button]
     public void Randomizer()
     {
+#if (UNITY_EDITOR)
+        InitRandomizer();
+#endif
         typeof(CharacterRandomizer).GetMethod("Randomize", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(cRan, null);
     }
 
     [Button]
-    public void Save()
+    public void Export()
     {
+#if (UNITY_EDITOR)
+        InitExport();
+#endif
         SetActiveParts();
         SaveDollPrefab();
     }
