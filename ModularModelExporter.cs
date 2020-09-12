@@ -92,7 +92,21 @@ public class ModularModelExporter : MonoBehaviour
     public void InitRandomizer()
     {
         cRan = GetComponent<CharacterRandomizer>();
-        typeof(CharacterRandomizer).GetMethod("Start", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(cRan, null);
+
+        // rebuild all lists
+        typeof(CharacterRandomizer).GetMethod("BuildLists", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(cRan, null);
+        
+        // disable any enabled objects before clear
+        if (cRan.enabledObjects.Count != 0)
+        {
+            foreach (GameObject g in cRan.enabledObjects)
+            {
+                g.SetActive(false);
+            }
+        }
+
+        // clear enabled objects list
+        cRan.enabledObjects.Clear();
     }
 
     public void InitExport()
@@ -162,8 +176,15 @@ public class ModularModelExporter : MonoBehaviour
         Optimize(prefab.transform, _mat);
         PrefabUtility.SaveAsPrefabAsset(prefab, prefabFile);
 
-        // remove the new prefab in the scene
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            DestroyImmediate(prefab);
+        };
+#else
+        // remove the new prefab in the scene      
         DestroyImmediate(prefab);
+#endif
     }
 
     private void EnsureDir(string path)
