@@ -18,4 +18,4 @@ If you click save again it will increment the number "Model_01", "Model_02" etc
 
 Go forth and randomize and create!
 
-https://i.imgur.com/ucCPwkV.png
+![Image of the scripts on the default Prefab](https://i.imgur.com/ucCPwkV.png)
