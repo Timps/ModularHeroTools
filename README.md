@@ -4,7 +4,7 @@ This pack requires the Synty Studios Unity asset - Modular Fantasy Heroes
 Avail from the [Asset store](https://assetstore.unity.com/packages/3d/characters/humanoids/fantasy/polygon-modular-fantasy-hero-characters-143468).
 Or the [Synty Store](https://syntystore.com/products/polygon-modular-fantasy-hero-characters). 
 
-## Instructions
+## Instructions - Modular Model Exporter
 
 1. Download and extract the contents into your project 'Assets' folder
 2. Locate the default modular character randomiser and add it to your scene.
@@ -24,3 +24,5 @@ Go forth and randomize and create!
 ![Image of the scripts on the default Prefab](https://i.imgur.com/ucCPwkV.png)
 
 ![Image of the created folders for materials and Prefabs](https://i.imgur.com/tXcoRSZ.png)
+
+## More tools to come
