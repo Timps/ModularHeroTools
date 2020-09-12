@@ -178,7 +178,6 @@ public class ModularModelExporter : MonoBehaviour
         Component[] components = GetComponents(typeof(Component));
         foreach(Component component in components)
         {
-            Debug.Log(component);
             if (component == cRan || component == this || component == transform) continue; 
             CopyComponent(component, prefab);
         }
