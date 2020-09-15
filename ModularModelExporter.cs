@@ -89,7 +89,7 @@ public class ModularModelExporter : MonoBehaviour
 
 
 #if (UNITY_EDITOR)
-    public void InitRandomizer()
+    public void InitBody()
     {
         cRan = GetComponent<CharacterRandomizer>();
 
@@ -109,6 +109,57 @@ public class ModularModelExporter : MonoBehaviour
         cRan.enabledObjects.Clear();
     }
 
+    // method for rolling percentages (returns true/false)
+    bool GetPercent(int pct)
+    {
+        bool p = false;
+        int roll = UnityEngine.Random.Range(0, 100);
+        if (roll <= pct)
+        {
+            p = true;
+        }
+        return p;
+    }
+
+    public void InitColor()
+    {
+        cRan = GetComponent<CharacterRandomizer>();
+    }
+
+    public SkinColor GetSkinColor()
+    {
+        Color mySkin = mat.GetColor("_Color_Skin");
+        Race myRace = Race.Elf;
+        foreach (Color c in cRan.whiteSkin)
+            if (mySkin == c) myRace = Race.Human;
+
+        foreach (Color c in cRan.blackSkin)
+            if (mySkin == c) myRace = Race.Human;
+        
+        foreach (Color c in cRan.brownSkin)
+            if (mySkin == c) myRace = Race.Human;
+
+        switch (myRace)
+        {
+            case Race.Human:
+                // select human skin 33% chance for each
+                int colorRoll = UnityEngine.Random.Range(0, 100);
+                // select white skin
+                if (colorRoll <= 33)
+                    return SkinColor.White;
+                // select brown skin
+                if (colorRoll > 33 && colorRoll < 66)
+                    return SkinColor.Brown;
+                // select black skin
+                return SkinColor.Black;
+            case Race.Elf:
+                // select elf skin
+                return SkinColor.Elf;
+            default:
+                return SkinColor.Brown;
+        }
+    }
+
     public void InitExport()
     {
         bodyparts = Enum.GetValues(typeof(BodyPartEnum));
@@ -122,12 +173,229 @@ public class ModularModelExporter : MonoBehaviour
 #endif
 
     [Button]
-    public void Randomizer()
+    public void RandomizeBody()
     {
 #if (UNITY_EDITOR)
-        InitRandomizer();
+        InitBody();
 #endif
-        typeof(CharacterRandomizer).GetMethod("Randomize", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(cRan, null);
+
+        // initialize settings
+        Gender gender = Gender.Male;
+        Race race = Race.Human;
+        SkinColor skinColor = SkinColor.White;
+        Elements elements = Elements.Yes;
+        HeadCovering headCovering = HeadCovering.HeadCoverings_Base_Hair;
+        FacialHair facialHair = FacialHair.Yes;
+
+        // roll for gender
+        if (!GetPercent(50))
+            gender = Gender.Female;
+
+        // roll for human (70% chance, 30% chance for elf)
+        if (!GetPercent(70))
+            race = Race.Elf;
+
+        // roll for facial elements (beard, eyebrows)
+        if (!GetPercent(50))
+            elements = Elements.No;
+
+        // select head covering 33% chance for each
+        int headCoveringRoll = UnityEngine.Random.Range(0, 100);
+        // HeadCoverings_Base_Hair
+        if (headCoveringRoll <= 33)
+            headCovering = HeadCovering.HeadCoverings_Base_Hair;
+        // HeadCoverings_No_FacialHair
+        if (headCoveringRoll > 33 && headCoveringRoll < 66)
+            headCovering = HeadCovering.HeadCoverings_No_FacialHair;
+        // HeadCoverings_No_Hair
+        if (headCoveringRoll >= 66)
+            headCovering = HeadCovering.HeadCoverings_No_Hair;
+
+        // select skin color if human, otherwise set skin color to elf
+        switch (race)
+        {
+            case Race.Human:
+                // select human skin 33% chance for each
+                int colorRoll = UnityEngine.Random.Range(0, 100);
+                // select white skin
+                if (colorRoll <= 33)
+                    skinColor = SkinColor.White;
+                // select brown skin
+                if (colorRoll > 33 && colorRoll < 66)
+                    skinColor = SkinColor.Brown;
+                // select black skin
+                if (colorRoll >= 66)
+                    skinColor = SkinColor.Black;
+                break;
+            case Race.Elf:
+                // select elf skin
+                skinColor = SkinColor.Elf;
+                break;
+        }
+
+        CharacterObjectGroups cog = cRan.female;
+        CharacterObjectListsAllGender allGender = cRan.allGender;
+        //roll for gender
+        switch (gender)
+        {
+            case Gender.Male:
+                cog = cRan.male;
+                // roll for facial hair if male
+                if (!GetPercent(50))
+                    facialHair = FacialHair.No;
+                break;
+
+            case Gender.Female:
+                cog = cRan.female;
+                // no facial hair if female
+                facialHair = FacialHair.No;
+
+                break;
+        }
+
+        // if facial elements are enabled
+        switch (elements)
+        {
+            case Elements.Yes:
+                //select head with all elements
+                if (cog.headAllElements.Count != 0)
+                    ActivateItem(cog.headAllElements[UnityEngine.Random.Range(0, cog.headAllElements.Count)]);
+
+                //select eyebrows
+                if (cog.eyebrow.Count != 0)
+                    ActivateItem(cog.eyebrow[UnityEngine.Random.Range(0, cog.eyebrow.Count)]);
+
+                //select facial hair (conditional)
+                if (cog.facialHair.Count != 0 && facialHair == FacialHair.Yes && gender == Gender.Male && headCovering != HeadCovering.HeadCoverings_No_FacialHair)
+                    ActivateItem(cog.facialHair[UnityEngine.Random.Range(0, cog.facialHair.Count)]);
+
+                // select hair attachment
+                switch (headCovering)
+                {
+                    case HeadCovering.HeadCoverings_Base_Hair:
+                        // set hair attachment to index 1
+                        if (allGender.all_Hair.Count != 0)
+                            ActivateItem(allGender.all_Hair[1]);
+                        if (allGender.headCoverings_Base_Hair.Count != 0)
+                            ActivateItem(allGender.headCoverings_Base_Hair[UnityEngine.Random.Range(0, allGender.headCoverings_Base_Hair.Count)]);
+                        break;
+                    case HeadCovering.HeadCoverings_No_FacialHair:
+                        // no facial hair attachment
+                        if (allGender.all_Hair.Count != 0)
+                            ActivateItem(allGender.all_Hair[UnityEngine.Random.Range(0, allGender.all_Hair.Count)]);
+                        if (allGender.headCoverings_No_FacialHair.Count != 0)
+                            ActivateItem(allGender.headCoverings_No_FacialHair[UnityEngine.Random.Range(0, allGender.headCoverings_No_FacialHair.Count)]);
+                        break;
+                    case HeadCovering.HeadCoverings_No_Hair:
+                        // select hair attachment
+                        if (allGender.headCoverings_No_Hair.Count != 0)
+                            ActivateItem(allGender.all_Hair[UnityEngine.Random.Range(0, allGender.all_Hair.Count)]);
+                        // if not human
+                        if (race != Race.Human)
+                        {
+                            // select elf ear attachment
+                            if (allGender.elf_Ear.Count != 0)
+                                ActivateItem(allGender.elf_Ear[UnityEngine.Random.Range(0, allGender.elf_Ear.Count)]);
+                        }
+                        break;
+                }
+                break;
+
+            case Elements.No:
+                //select head with no elements
+                if (cog.headNoElements.Count != 0)
+                    ActivateItem(cog.headNoElements[UnityEngine.Random.Range(0, cog.headNoElements.Count)]);
+                break;
+        }
+
+        // select torso starting at index 1
+        if (cog.torso.Count != 0)
+            ActivateItem(cog.torso[UnityEngine.Random.Range(1, cog.torso.Count)]);
+
+        // determine chance for upper arms to be different and activate
+        if (cog.arm_Upper_Right.Count != 0)
+            RandomizeLeftRight(cog.arm_Upper_Right, cog.arm_Upper_Left, 15);
+
+        // determine chance for lower arms to be different and activate
+        if (cog.arm_Lower_Right.Count != 0)
+            RandomizeLeftRight(cog.arm_Lower_Right, cog.arm_Lower_Left, 15);
+
+        // determine chance for hands to be different and activate
+        if (cog.hand_Right.Count != 0)
+            RandomizeLeftRight(cog.hand_Right, cog.hand_Left, 15);
+
+        // select hips starting at index 1
+        if (cog.hips.Count != 0)
+            ActivateItem(cog.hips[UnityEngine.Random.Range(1, cog.hips.Count)]);
+
+        // determine chance for legs to be different and activate
+        if (cog.leg_Right.Count != 0)
+            RandomizeLeftRight(cog.leg_Right, cog.leg_Left, 15);
+
+        // select chest attachment
+        if (allGender.chest_Attachment.Count != 0)
+            ActivateItem(allGender.chest_Attachment[UnityEngine.Random.Range(0, allGender.chest_Attachment.Count)]);
+
+        // select back attachment
+        if (allGender.back_Attachment.Count != 0)
+            ActivateItem(allGender.back_Attachment[UnityEngine.Random.Range(0, allGender.back_Attachment.Count)]);
+
+        // determine chance for shoulder attachments to be different and activate
+        if (allGender.shoulder_Attachment_Right.Count != 0)
+            RandomizeLeftRight(allGender.shoulder_Attachment_Right, allGender.shoulder_Attachment_Left, 10);
+
+        // determine chance for elbow attachments to be different and activate
+        if (allGender.elbow_Attachment_Right.Count != 0)
+            RandomizeLeftRight(allGender.elbow_Attachment_Right, allGender.elbow_Attachment_Left, 10);
+
+        // select hip attachment
+        if (allGender.hips_Attachment.Count != 0)
+            ActivateItem(allGender.hips_Attachment[UnityEngine.Random.Range(0, allGender.hips_Attachment.Count)]);
+
+        // determine chance for knee attachments to be different and activate
+        if (allGender.knee_Attachement_Right.Count != 0)
+            RandomizeLeftRight(allGender.knee_Attachement_Right, allGender.knee_Attachement_Left, 10);
+
+    }
+    // method for handling the chance of left/right items to be differnt (such as shoulders, hands, legs, arms)
+    void RandomizeLeftRight(List<GameObject> objectListRight, List<GameObject> objectListLeft, int rndPercent)
+    {
+        // rndPercent = chance for left item to be different
+
+        // stored right index
+        int index = UnityEngine.Random.Range(0, objectListRight.Count);
+
+        // enable item from list using index
+        ActivateItem(objectListRight[index]);
+
+        // roll for left item mismatch, if true randomize index based on left item list
+        if (GetPercent(rndPercent))
+            index = UnityEngine.Random.Range(0, objectListLeft.Count);
+
+        // enable left item from list using index
+        ActivateItem(objectListLeft[index]);
+    }
+
+    // enable game object and add it to the enabled objects list
+    void ActivateItem(GameObject go)
+    {
+        // enable item
+        go.SetActive(true);
+
+        // add item to the enabled items list
+        cRan.enabledObjects.Add(go);
+    }
+
+
+    [Button]
+    public void RandomizeColor()
+    {
+#if (UNITY_EDITOR)
+        InitColor();
+#endif
+        System.Object[] skinColor = new System.Object[1];
+        skinColor[0] = GetSkinColor();
+        typeof(CharacterRandomizer).GetMethod("RandomizeColors", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(cRan, skinColor);
     }
 
     [Button]
