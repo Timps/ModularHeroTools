@@ -437,6 +437,9 @@ public class ModularModelExporter : MonoBehaviour
 
         Material _mat = new Material(mat);
 
+
+        SaveTexture(_mat.GetTexture("_Texture"));
+
         var partName = "Material";
         var materialPath = $"{materialDir}/{filename}_{partName}_{increment}.mat";
         AssetDatabase.CreateAsset(_mat, materialPath);
@@ -453,6 +456,34 @@ public class ModularModelExporter : MonoBehaviour
 
         // remove the new prefab in the scene      
         DestroyImmediate(prefab);
+    }
+
+    public void SaveTexture(Texture mainTexture)
+    {
+        Texture2D texture2D = new Texture2D(mainTexture.width, mainTexture.height, TextureFormat.RGBA32, false);
+
+        RenderTexture currentRT = RenderTexture.active;
+        
+        RenderTexture renderTexture = new RenderTexture(mainTexture.width, mainTexture.height, 32);
+        Graphics.Blit(null, renderTexture, new Material(mat));
+
+        RenderTexture.active = renderTexture;
+        texture2D.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
+        texture2D.Apply();
+
+        RenderTexture.active = null;
+        renderTexture.Release();
+
+        var texturelDir = $"Assets/{directory}/Texture";
+        var partName = "Texture";
+        EnsureDir($"{texturelDir}/{filename}_{partName}_{increment}.png");
+        SaveTextureAsPNG(texture2D, $"Assets/GeneratedModels/Texture/{filename}_{partName}_{increment}.png");
+    }
+    public void SaveTextureAsPNG(Texture2D _texture, string _fullPath)
+    {
+        byte[] _bytes = _texture.EncodeToPNG();
+        System.IO.File.WriteAllBytes(_fullPath, _bytes);
+        AssetDatabase.Refresh();
     }
 
     T CopyComponent<T>(T original, GameObject destination) where T : Component
