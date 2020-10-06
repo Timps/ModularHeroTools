@@ -41,7 +41,8 @@ public enum BodyPartEnum
 
 public class ModularModelExporter : MonoBehaviour
 {
-    public Material mat;
+    public Material materialBeforeExport;
+    public Material materialAfterExport;
 
     public string filename = "Model";
     public string directory = "GeneratedModels";
@@ -126,40 +127,6 @@ public class ModularModelExporter : MonoBehaviour
         cRan = GetComponent<CharacterRandomizer>();
     }
 
-    public SkinColor GetSkinColor()
-    {
-        Color mySkin = mat.GetColor("_Color_Skin");
-        Race myRace = Race.Elf;
-        foreach (Color c in cRan.whiteSkin)
-            if (mySkin == c) myRace = Race.Human;
-
-        foreach (Color c in cRan.blackSkin)
-            if (mySkin == c) myRace = Race.Human;
-        
-        foreach (Color c in cRan.brownSkin)
-            if (mySkin == c) myRace = Race.Human;
-
-        switch (myRace)
-        {
-            case Race.Human:
-                // select human skin 33% chance for each
-                int colorRoll = UnityEngine.Random.Range(0, 100);
-                // select white skin
-                if (colorRoll <= 33)
-                    return SkinColor.White;
-                // select brown skin
-                if (colorRoll > 33 && colorRoll < 66)
-                    return SkinColor.Brown;
-                // select black skin
-                return SkinColor.Black;
-            case Race.Elf:
-                // select elf skin
-                return SkinColor.Elf;
-            default:
-                return SkinColor.Brown;
-        }
-    }
-
     public void InitExport()
     {
         bodyparts = Enum.GetValues(typeof(BodyPartEnum));
@@ -172,6 +139,8 @@ public class ModularModelExporter : MonoBehaviour
     }
 #endif
 
+    public Race race;
+
     [Button]
     public void RandomizeBody()
     {
@@ -181,8 +150,7 @@ public class ModularModelExporter : MonoBehaviour
 
         // initialize settings
         Gender gender = Gender.Male;
-        Race race = Race.Human;
-        SkinColor skinColor = SkinColor.White;
+        race = Race.Human;
         Elements elements = Elements.Yes;
         HeadCovering headCovering = HeadCovering.HeadCoverings_Base_Hair;
         FacialHair facialHair = FacialHair.Yes;
@@ -210,28 +178,6 @@ public class ModularModelExporter : MonoBehaviour
         // HeadCoverings_No_Hair
         if (headCoveringRoll >= 66)
             headCovering = HeadCovering.HeadCoverings_No_Hair;
-
-        // select skin color if human, otherwise set skin color to elf
-        switch (race)
-        {
-            case Race.Human:
-                // select human skin 33% chance for each
-                int colorRoll = UnityEngine.Random.Range(0, 100);
-                // select white skin
-                if (colorRoll <= 33)
-                    skinColor = SkinColor.White;
-                // select brown skin
-                if (colorRoll > 33 && colorRoll < 66)
-                    skinColor = SkinColor.Brown;
-                // select black skin
-                if (colorRoll >= 66)
-                    skinColor = SkinColor.Black;
-                break;
-            case Race.Elf:
-                // select elf skin
-                skinColor = SkinColor.Elf;
-                break;
-        }
 
         CharacterObjectGroups cog = cRan.female;
         CharacterObjectListsAllGender allGender = cRan.allGender;
@@ -385,7 +331,7 @@ public class ModularModelExporter : MonoBehaviour
         // add item to the enabled items list
         cRan.enabledObjects.Add(go);
     }
-
+    public bool randomizeRace;
 
     [Button]
     public void RandomizeColor()
@@ -394,7 +340,28 @@ public class ModularModelExporter : MonoBehaviour
         InitColor();
 #endif
         System.Object[] skinColor = new System.Object[1];
-        skinColor[0] = GetSkinColor();
+        // select skin color if human, otherwise set skin color to elf
+        switch (race)
+        {
+            case Race.Human:
+                // select human skin 33% chance for each
+                int colorRoll = UnityEngine.Random.Range(0, 100);
+                // select white skin
+                if (colorRoll <= 33)
+                    skinColor[0] = SkinColor.White;
+                // select brown skin
+                if (colorRoll > 33 && colorRoll < 66)
+                    skinColor[0] = SkinColor.Brown;
+                // select black skin
+                if (colorRoll >= 66)
+                    skinColor[0] = SkinColor.Black;
+                break;
+            case Race.Elf:
+                // select elf skin
+                skinColor[0] = SkinColor.Elf;
+                break;
+        }
+
         typeof(CharacterRandomizer).GetMethod("RandomizeColors", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(cRan, skinColor);
     }
 
@@ -424,6 +391,8 @@ public class ModularModelExporter : MonoBehaviour
                 }
     }
 
+    public RenderPipeline currentPipline;
+
     private void SaveDollPrefab()
     {
         SetIncrement();
@@ -435,16 +404,21 @@ public class ModularModelExporter : MonoBehaviour
         var materialDir = $"Assets/{directory}/Materials";
         EnsureDir($"{materialDir}/{filename}.mat");
 
-        Material _mat = new Material(mat);
 
+        Material _matBefore = new Material(materialBeforeExport);
+        Texture2D _tex = SaveTexture(_matBefore, _matBefore.GetTexture("_Texture"));
 
-        SaveTexture(_mat.GetTexture("_Texture"));
+        Material _matAfter = new Material(materialAfterExport);
+        if (currentPipline == RenderPipeline.URP)
+            _matAfter.SetTexture("_BaseMap", _tex);
+        else
+            _matAfter.mainTexture = _tex;
 
         var partName = "Material";
         var materialPath = $"{materialDir}/{filename}_{partName}_{increment}.mat";
-        AssetDatabase.CreateAsset(_mat, materialPath);
+        AssetDatabase.CreateAsset(_matAfter, materialPath);
 
-        Optimize(prefab.transform, _mat);
+        Optimize(prefab.transform, _matAfter);
 
         Component[] components = GetComponents(typeof(Component));
         foreach(Component component in components)
@@ -458,14 +432,14 @@ public class ModularModelExporter : MonoBehaviour
         DestroyImmediate(prefab);
     }
 
-    public void SaveTexture(Texture mainTexture)
+    public Texture2D SaveTexture(Material _mat, Texture mainTexture)
     {
         Texture2D texture2D = new Texture2D(mainTexture.width, mainTexture.height, TextureFormat.RGBA32, false);
 
         RenderTexture currentRT = RenderTexture.active;
         
         RenderTexture renderTexture = new RenderTexture(mainTexture.width, mainTexture.height, 32);
-        Graphics.Blit(null, renderTexture, new Material(mat));
+        Graphics.Blit(null, renderTexture, new Material(_mat));
 
         RenderTexture.active = renderTexture;
         texture2D.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
@@ -478,7 +452,10 @@ public class ModularModelExporter : MonoBehaviour
         var partName = "Texture";
         EnsureDir($"{texturelDir}/{filename}_{partName}_{increment}.png");
         SaveTextureAsPNG(texture2D, $"Assets/GeneratedModels/Texture/{filename}_{partName}_{increment}.png");
+        return texture2D;
     }
+
+
     public void SaveTextureAsPNG(Texture2D _texture, string _fullPath)
     {
         byte[] _bytes = _texture.EncodeToPNG();
@@ -582,6 +559,14 @@ public class ReBoner
             }
         }
     }
+}
+
+public enum RenderPipeline
+{
+    URP,
+    HDRP,
+    LWRP,
+    Default
 }
 
 [AttributeUsage(AttributeTargets.Method)]
